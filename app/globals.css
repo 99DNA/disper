@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  width: 87.5%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 12.5%;
+  font-family: et-book, Palatino, "Palatino Linotype", "Palatino LT STD",
+    "Book Antiqua", Georgia, serif;
+  background-color: #fffff8;
+  color: #111;
+  max-width: 1400px;
+}
+
+html {
+  font-size: 18px;
+}
+.img {
+  margin-left: -33px;
+  margin-bottom: 50px;
+}
+
+.createMeta {
+  padding: 20px;
+}
+
+.connectButton {
+  margin-top: 20px;
+}
+
+.link {
+  text-decoration: none;
+}
+
+.buy {
+  margin-left: 20px;
+  border: none;
+  font-style: italic;
+  padding: 8px;
+  background: aquamarine;
+  box-shadow: 6px 6px crimson;
+}
+
+.sell {
+  margin-left: 20px;
+  font-style: italic;
+  border: none;
+  padding: 8px;
+  background: aquamarine;
+  box-shadow: 6px 6px crimson;
+}
+
+.createWallet {
+  font-size: 20px;
+  font-style: italic;
+  background: aquamarine;
+  box-shadow: 6px 6px crimson;
+  padding: 8px;
+  width: 158px;
+  height: 40px;
+}
+
+.button {
+  margin-top: 20px;
+}
+
+.input {
+  margin-top: 20px;
+  flex-grow: 1;
+  border: none;
+  border-bottom: 2px #111 solid;
+  padding: 0.7rem;
+  background: aquamarine;
+  margin-right: 1.4rem;
+  width: 530px;
+  height: 50px;
+}
+
+.load {
+  border: none;
+  font-style: italic;
+  padding: 0.7rem;
+  background: aquamarine;
+  box-shadow: 6px 6px crimson;
+}
+.token {
+  margin-top: 20px;
+}
