@@ -9,8 +9,27 @@ import Web3 from "web3";
 import logo from "./assets/ethereum.svg";
 import Image from "next/image";
 import Recipients from "./components/Recipients";
+import { usePrepareContractWrite, useContractWrite } from "wagmi";
+import contractAbi from "./assets/abi/contract.json";
+import contractERC20Abi from "./assets/abi/erc20.json";
+import { parseEther } from "ethers/lib/utils";
 
 export default function Home() {
+  const [dataImport, setDataImport] = useState([]);
+
+  const { config } = usePrepareContractWrite({
+    address: "0xD152f549545093347A162Dce210e7293f1452150",
+    abi: contractAbi,
+    functionName: "disperseEther",
+    args: [
+      ["0xdAC17F958D2ee523a2206206994597C13D831ec7"],
+      [parseEther("0.001").toString()],
+    ],
+    value: "1000000000000000",
+    //enabled: Boolean(!dataImport),
+  });
+  const { write, onError } = useContractWrite(config);
+  console.log("error", onError);
   const createWallet = () => {
     const web3 = new Web3();
     const accounts = [];
@@ -27,9 +46,7 @@ export default function Home() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.setAttribute("href", url);
-
     a.setAttribute("download", "wallets.csv");
-
     a.click();
   };
 
@@ -46,6 +63,11 @@ export default function Home() {
   };
 
   const loadToken = async () => {};
+
+  const handleSetAddresses = (data) => {
+    console.log("data", data);
+    setDataImport(data);
+  };
 
   return (
     <div className="mx-30 px-30 pt-28">
@@ -90,9 +112,17 @@ export default function Home() {
             load
           </button>
         </div>
+
         <div>
-          <Recipients />
+          <Recipients handleSetAddresses={handleSetAddresses} />
         </div>
+        <button
+          className="load"
+          onClick={() => write()}
+          style={{ marginTop: 16 }}
+        >
+          Send
+        </button>
       </section>
     </div>
   );
