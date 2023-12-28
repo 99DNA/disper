@@ -1,97 +1,73 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
-import { ethers } from "ethers";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
-import * as A from "./index";
-import Web3 from "web3";
 
 import logo from "./assets/ethereum.svg";
 import Image from "next/image";
 import Recipients from "./components/Recipients";
-import { usePrepareContractWrite, useContractWrite, useWaitForTransaction } from "wagmi";
-import contractAbi from "./assets/abi/contract.json";
-import contractERC20Abi from "./assets/abi/erc20.json";
-import { parseEther } from "ethers/lib/utils";
-import erc20Abi from './assets/abi/erc20.json'
 
+const {
+  Keypair,
+  Transaction,
+  SystemProgram,
+  PublicKey,
+  LAMPORTS_PER_SOL,
+} = require("@solana/web3.js");
+import { CSVLink } from "react-csv";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import {
+  // getOrCreateAssociatedTokenAccount,
+  createTransferInstruction,
+  //   getAccount,
+  //   createAssociatedTokenAccount,
+  //   getAssociatedTokenAddressSync,
+  //createAssociatedTokenAccountInstruction,
+} from "@solana/spl-token";
+import { getOrCreateAssociatedTokenAccount } from "./utils/solana/getOrCreateAssociatedTokenAccount";
+// import { createTransferInstruction } from "./utils/solana/createTransferInstructions";
+import BigNumber from "bignumber.js";
 export default function Home() {
   const [dataImport, setDataImport] = useState([]);
-  const [isSendEther, setIsSendEther] = useState(true)
-  const [recipients, setRecipients] = useState()
-  const [values, setValues] = useState()
-  const [total, setTotal] = useState()
+  const [isSendEther, setIsSendEther] = useState(true);
+  const [values, setValues] = useState();
+  const [total, setTotal] = useState();
+  const { sendTransaction, publicKey, signTransaction } = useWallet();
+  const { connection } = useConnection();
+  const [tokenAddress, setTokenAddress] = useState("");
+  const [decimalsToken, setDecimalsToken] = useState(0);
 
   useEffect(() => {
-    
-    const _values = dataImport.map((r) => r.amount)
-    let _total = 0
+    const _values = dataImport.map((r) => r.amount);
+    let _total = 0;
     for (let i = 0; i < _values.length; i++) {
-      _total += Number(_values[i])
+      _total += Number(_values[i]);
     }
-    console.log("_total: ", _total)
-    setTotal(_total)
+    console.log("_total: ", _total);
+    setTotal(_total);
 
-    console.log("values: ", _values)
-   
-    setValues(_values)
-  },[dataImport])
+    console.log("values: ", _values);
 
-  const { config } = usePrepareContractWrite({
-    address: "0xD152f549545093347A162Dce210e7293f1452150",
-    abi: contractAbi,
-    functionName: "disperseEther",
-    args: [
-      ["0xdAC17F958D2ee523a2206206994597C13D831ec7"],
-      [parseEther("0.001").toString()],
-    ],
-    value: "1000000000000000",
-    //enabled: Boolean(!dataImport),
-  });
-  const { data, write } = useContractWrite(config);
-  //console.log("error", onError);
-
-  const {isLoading, isSuccess} = useWaitForTransaction({hash: data?.hash})
-
+    setValues(_values);
+  }, [dataImport]);
 
   const createWallet = () => {
-    const web3 = new Web3();
     const accounts = [];
     for (let i = 0; i < 10; i++) {
-      const account = web3.eth.accounts.create();
-      accounts.push(account);
+      let keypair = Keypair.generate();
+      const publicKey = keypair.publicKey.toString();
+      const secretKey = keypair.secretKey;
+      // console.log("bs58.encode", bs58.encode(secretKey));
+      accounts.push({ publicKey, secretKey });
     }
-    console.log(accounts);
-    download(csvMaker(accounts));
+    return accounts;
   };
-
-  const download = function (data) {
-    const blob = new Blob([data], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.setAttribute("href", url);
-    a.setAttribute("download", "wallets.csv");
-    a.click();
-  };
-
-  const csvMaker = function (data) {
-    const csvRows = [];
-
-    const values = Object.values(data).join(",");
-    let val = "";
-    for (const w of data) {
-      val = `${val}${w.privateKey}\n`;
-    }
-    csvRows.push(val);
-    return csvRows.join("\n");
-  };
-
   const loadToken = async () => {
     try {
-      
-      
+      if (tokenAddress) {
+        const decimalsToken_ = await getNumberDecimals(tokenAddress);
+        setDecimalsToken(decimalsToken_);
+      }
     } catch (error) {
-      
+      console.log("error loadToken", error);
     }
   };
 
@@ -101,41 +77,125 @@ export default function Home() {
   };
 
   const disperseEther = async () => {
+    if (!publicKey) alert("Please connect wallet.");
     try {
-      const { ethereum } = window;
-      if (ethereum) {
-        const provider = new ethers.providers.Web3Provider(ethereum);
-        const signer = provider.getSigner();
-        const disperseContract = new ethers.Contract(
-          "0xD152f549545093347A162Dce210e7293f1452150",
-          contractAbi,
-          signer
-        );
-        console.log("=======")
-        console.log("data import : ", dataImport)
-
-        const recipients = dataImport.map((recipient) => recipient.address);
-        const values = dataImport.map((recipient) => parseEther(recipient.amount));
-
-        console.log('++++++++++++')
-
-        console.log("Dispersing ETH now");
-        console.log(total);
-        const txn = await disperseContract.disperseEther(recipients, values, {
-          value: parseEther(total.toString()).toString(),
+      let transactions = new Transaction();
+      if (isSendEther) {
+        dataImport.map((e) => {
+          transactions.add(
+            SystemProgram.transfer({
+              fromPubkey: publicKey,
+              toPubkey: new PublicKey(e[0]),
+              lamports: new BigNumber(LAMPORTS_PER_SOL)
+                .multipliedBy(e[1])
+                .toString(),
+            })
+          );
         });
-        
-        await txn.wait();
+      } else {
+        // const associatedToken = getAssociatedTokenAddressSync(mint, publicKey);
+        // const associatedTokenTo = getAssociatedTokenAddressSync(
+        //   mint,
+        //   toPublicKey
+        // );
 
-        console.log("txn: ", txn?.hash)
-        
-        console.log("Completed dispersing ether");
+        // try {
+        //   const fromTokenAccount = await getAccount(
+        //     connection,
+        //     associatedToken
+        //   );
+        //   console.log(
+        //     "fromTokenAccount",
+        //     fromTokenAccount.address.toString(),
+        //     publicKey.toString()
+        //   );
+        // } catch {
+        //   transactions.add(
+        //     createAssociatedTokenAccountInstruction(
+        //       publicKey,
+        //       associatedToken,
+        //       publicKey,
+        //       mint
+        //     )
+        //   );
+        // }
+
+        // try {
+        //   const toTokenAccount = await getAccount(
+        //     connection,
+        //     associatedTokenTo
+        //   );
+        // } catch {
+        //   transactions.add(
+        //     createAssociatedTokenAccountInstruction(
+        //       publicKey,
+        //       associatedTokenTo,
+        //       toPublicKey,
+        //       mint
+        //     )
+        //   );
+        // }
+        // console.log("transactions", transactions);
+        // const fromTokenAccount = await getAccount(connection, associatedToken);
+        // console.log("fromTokenAccount", fromTokenAccount);
+        // const toTokenAccount = await getAccount(connection, associatedTokenTo);
+        for (var i = 0; i < dataImport.length; i++) {
+          const toPublicKey = new PublicKey(dataImport[i][0]);
+          const mint = new PublicKey(tokenAddress);
+          const fromTokenAccount = await getOrCreateAssociatedTokenAccount(
+            connection,
+            publicKey,
+            mint,
+            publicKey,
+            signTransaction
+          );
+          console.log(
+            "fromTokenAccount",
+            fromTokenAccount,
+            toPublicKey.toString()
+          );
+          const toTokenAccount = await getOrCreateAssociatedTokenAccount(
+            connection,
+            publicKey,
+            mint,
+            toPublicKey,
+            signTransaction
+          );
+          console.log("toTokenAccount", toTokenAccount);
+
+          transactions.add(
+            createTransferInstruction(
+              fromTokenAccount.address, // source
+              toTokenAccount.address, // dest
+              publicKey,
+              new BigNumber(10)
+                .exponentiatedBy(decimalsToken)
+                .multipliedBy(dataImport[i][1])
+                .toString(),
+              []
+            )
+          );
+        }
       }
+      console.log("send transaction");
+      const signature = await sendTransaction(transactions, connection);
+      await connection.confirmTransaction(signature, "processed");
+      alert("Completed dispersing coins/tokens");
     } catch (error) {
-      console.log("error: ", error)
+      console.log("error: ", error);
     }
+  };
+  const handleChangeToken = (text) => {
+    setTokenAddress(text);
+  };
+  async function getNumberDecimals(mintAddress) {
+    const info = await connection.getParsedAccountInfo(
+      new PublicKey(mintAddress)
+    );
+    console.log("info", info);
+    const result = (info.value?.data).parsed.info.decimals;
+    return result;
   }
-
   return (
     <div className="mx-30 px-30 pt-20">
       <section>
@@ -156,34 +216,40 @@ export default function Home() {
           </p>
         </div>
         <div className="button">
-          <button className="createWallet" onClick={createWallet}>
-            Create Wallet
-          </button>
+          <CSVLink data={createWallet()} filename={"wallet.csv"}>
+            <button className="createWallet">Create Wallet</button>
+          </CSVLink>
+
           <button className="buy">buy</button>
           <button className="sell">sell</button>
         </div>
-        <div className="button">
-          <div className="connectButton">
-            {" "}
-            <ConnectButton />
-          </div>
+        <div className="mt-10">
+          <i>
+            send <u onClick={() => setIsSendEther(true)}>ether</u> or{" "}
+            <u onClick={() => setIsSendEther(false)}>token</u>
+          </i>
         </div>
-        <div className="mt-10"><i>send <u onClick={() => setIsSendEther(true)}>ether</u> or <u onClick={() => setIsSendEther(false)}>token</u></i></div>
-        {!isSendEther ?
-        (
+        {!isSendEther ? (
           <div>
-          <div className="token">Token Address</div>
-          <input
-            tile="text"
-            placeholder="0x73978a2ce9bd30d0a84471d16f02d32913f88c23"
-            className="input"
-          />
-          <button className="load" onClick={loadToken}>
-            load
-          </button>
-        </div>
-        ) : <div></div>}
-        
+            <div className="token">Token Address</div>
+            <input
+              tile="text"
+              placeholder="0x73978a2ce9bd30d0a84471d16f02d32913f88c23"
+              className="input"
+              onChange={(e) => handleChangeToken(e.target.value)}
+            />
+            <button
+              className="load"
+              onClick={loadToken}
+              style={{ marginBottom: 10, display: "flex" }}
+            >
+              load
+            </button>
+            {decimalsToken !== 0 && "load success!"}
+          </div>
+        ) : (
+          <div></div>
+        )}
 
         <div>
           <Recipients handleSetAddresses={handleSetAddresses} />
@@ -192,9 +258,9 @@ export default function Home() {
           <button
             className="load"
             onClick={disperseEther}
-            style={{ margin: '16px 0px' }}
+            style={{ margin: "16px 0px" }}
           >
-            {isLoading ? 'sending' : 'send'}
+            {"send"}
           </button>
           {/* {isSuccess && (
             <div>

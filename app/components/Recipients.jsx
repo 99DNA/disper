@@ -4,8 +4,7 @@ import Web3 from "web3";
 
 function Recipients({ tokenSymbol, handleSetAddresses }) {
   const [file, setFile] = useState();
-  const [listAddress, setListAddress] = useState()
-
+  const [listAddress, setListAddress] = useState();
 
   const fileReader = new FileReader();
 
@@ -26,28 +25,27 @@ function Recipients({ tokenSymbol, handleSetAddresses }) {
   };
   const csvFileToArray = (string) => {
     // const csvHeader = string.slice(0, string.indexOf("\n")).split(",");
-    const web3 = new Web3()
-    console.log("string: ", string)
+    const web3 = new Web3();
+    console.log("string: ", string);
     //setListAddress(string)
     const csvRows = string.split("\n");
-    csvRows.pop()
-    console.log("csv row: ", csvRows)
+    csvRows.pop();
+    console.log("csv row: ", csvRows);
     const listPrivateKey = csvRows.map((i) => {
       const values = i.split(" ");
       return values;
     });
-  
+
     console.log("listPrivateKey: ", listPrivateKey);
 
     const listPubkey = csvRows.map((i) => {
-      console.log("key: ", i)
-      const publicKey = web3.eth.accounts.privateKeyToAccount(i)
-      return publicKey.address
-    })
+      console.log("key: ", i);
+      const publicKey = web3.eth.accounts.privateKeyToAccount(i);
+      return publicKey.address;
+    });
 
-    const listPubkeyStr = listPubkey.join("\r\n")
-    setListAddress(listPubkeyStr)
-
+    const listPubkeyStr = listPubkey.join("\r\n");
+    setListAddress(listPubkeyStr);
 
     console.log("listPubkey: ", listPubkey);
     // const listAdd = array.map((e) => {
@@ -56,24 +54,26 @@ function Recipients({ tokenSymbol, handleSetAddresses }) {
     // const listAmount = array.map((e) => {
     //   return e[1];
     // });
-    0x4aB6301bB3d1d5928E0C3e18BDDC2e50fD9504de
-    
+    0x4ab6301bb3d1d5928e0c3e18bddc2e50fd9504de;
   };
 
-  const handleChange = (e) => {
-    //console.log("input",e.target.value)
-    setListAddress(e.target.value)
-    const strSplit = e.target.value.toString().split("\n")
-    //console.log("list: ", strSplit)
-    const listRecipients = strSplit.map((i) => {
-      return {address: i.substring(0, 42), amount: i.substring(43) ? i.substring(43) : "0"}
-    })
+  const handleChange = (str) => {
+    console.log("input", str);
+    setListAddress(str);
+    var separateLines = str.split(/\r?\n|\r|\n/g);
+    console.log("separateLines", separateLines);
 
-    //console.log("listRecipients: ", listRecipients)
+    // const strSplit = e.target.value.toString().split("\n")
+    // //console.log("list: ", strSplit)
+    // const listRecipients = strSplit.map((i) => {
+    //   return {address: i.substring(0, 42), amount: i.substring(43) ? i.substring(43) : "0"}
+    // })
 
-    handleSetAddresses(listRecipients)
-  }
-    return (
+    // //console.log("listRecipients: ", listRecipients)
+
+    handleSetAddresses(separateLines.map((e) => e.split(" ")));
+  };
+  return (
     <div className="pt-16">
       <h3 className="text-2xl font-light italic">recipients and amounts</h3>
       <p className="pt-3 text-l font-light">
@@ -81,16 +81,23 @@ function Recipients({ tokenSymbol, handleSetAddresses }) {
         format.
       </p>
       <textarea
-        style={{ backgroundColor: "aquamarine", padding: '0.5rem', borderBottom: '2px solid #111111'}}
+        style={{
+          backgroundColor: "aquamarine",
+          padding: "0.5rem",
+          borderBottom: "2px solid #111111",
+        }}
         rows={5}
         cols={65}
         maxLength={9999}
         value={listAddress}
-        onChange={handleChange}
-        placeholder={"0x2b1F577230F4D72B3818895688b66abD9701B4dC=1.41421" + "\n" + "0x2b1F577230F4D72B3818895688b66abD9701B4dC 1.41421" + "\n" + "0x2b1F577230F4D72B3818895688b66abD9701B4dC,1.41421"}
-      >
-        
-      </textarea>
+        onChange={(e) => handleChange(e.target.value)}
+        placeholder={
+          "0x2b1F577230F4D72B3818895688b66abD9701B4dC 1.41421" +
+          "\n" +
+          "0x2b1F577230F4D72B3818895688b66abD9701B4dC 1.41421" +
+          "\n"
+        }
+      ></textarea>
       <form>
         <input
           type={"file"}
