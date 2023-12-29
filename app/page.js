@@ -12,10 +12,15 @@ const {
 } = require("@solana/web3.js");
 import { CSVLink } from "react-csv";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { createTransferInstruction } from "@solana/spl-token";
+import {
+  createTransferInstruction,
+  getAssociatedTokenAddress,
+  getAccount,
+} from "@solana/spl-token";
 import { getOrCreateAssociatedTokenAccount } from "./utils/solana/getOrCreateAssociatedTokenAccount";
 // import { createTransferInstruction } from "./utils/solana/createTransferInstructions";
 import BigNumber from "bignumber.js";
+import { base58 } from "ethers/lib/utils";
 export default function Home() {
   const [dataImport, setDataImport] = useState([]);
   const [isSendEther, setIsSendEther] = useState(true);
@@ -27,6 +32,9 @@ export default function Home() {
   const [decimalsToken, setDecimalsToken] = useState(0);
   const [loadingToken, setLoadingToken] = useState(false);
   const [errorLoadToken, setErrorLoadToken] = useState("");
+  const [numberCreateWallet, setNumberCreateWallet] = useState(10);
+  const [balance, setBalance] = useState(null);
+  const [balanceToken, setBalanceToken] = useState(null);
 
   useEffect(() => {
     const _values = dataImport.map((r) => r.amount);
@@ -42,13 +50,12 @@ export default function Home() {
     setValues(_values);
   }, [dataImport]);
 
-  const createWallet = () => {
+  const createWallet = (numberCreateWallet_) => {
     const accounts = [];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < numberCreateWallet_; i++) {
       let keypair = Keypair.generate();
       const publicKey = keypair.publicKey.toString();
-      const secretKey = keypair.secretKey;
-      // console.log("bs58.encode", bs58.encode(secretKey));
+      const secretKey = base58.encode(keypair.secretKey);
       accounts.push({ publicKey, secretKey });
     }
     return accounts;
@@ -59,6 +66,8 @@ export default function Home() {
         setLoadingToken(true);
         setDecimalsToken(0);
         const decimalsToken_ = await getNumberDecimals(tokenAddress);
+        const balanceToken_ = await getTokenBalanceWeb3();
+        setBalanceToken(balanceToken_);
         setLoadingToken(false);
         setDecimalsToken(decimalsToken_);
       }
@@ -206,7 +215,22 @@ export default function Home() {
     const result = (info.value?.data).parsed.info.decimals;
     return result;
   }
-  const [balance, setBalance] = useState(null);
+  async function getTokenBalanceWeb3() {
+    try {
+      const associatedToken = await getAssociatedTokenAddress(
+        new PublicKey(tokenAddress),
+        publicKey
+      );
+      const tokenAccount = await getAccount(connection, associatedToken);
+      const info = await connection.getTokenAccountBalance(
+        tokenAccount.address
+      );
+      if (!info.value.uiAmount) throw new Error("No balance found");
+      return info.value.uiAmount;
+    } catch {
+      return 0;
+    }
+  }
 
   const fetchBalance = async () => {
     if (publicKey && connection) {
@@ -225,7 +249,7 @@ export default function Home() {
   return (
     <div style={{ marginTop: 16 }}>
       Balance: {balance + "SOL"}
-      <section className="mx-30 px-30 pt-10">
+      <section className="mx-30 px-30 pt-4">
         <div>
           <div className="flex space-between">
             <h2 className="mt-4 text-4xl font-light mr-1">Solana {"  "}</h2>
@@ -237,12 +261,40 @@ export default function Home() {
           </p>
         </div>
         <div className="button">
-          <CSVLink data={createWallet()} filename={"wallet.csv"}>
+          <CSVLink
+            data={createWallet(numberCreateWallet)}
+            filename={"wallet.csv"}
+            headers={[
+              { label: "Public Key", key: "publicKey" },
+              { label: "Secret Key", key: "secretKey" },
+            ]}
+          >
             <button className="createWallet">Create Wallet</button>
           </CSVLink>
 
           <button className="buy">buy</button>
           <button className="sell">sell</button>
+        </div>
+        <div
+          className="flex"
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            height: 50,
+            marginTop: 16,
+          }}
+        >
+          <h5>Number wallet create:</h5>
+          <input
+            type="number"
+            placeholder="10"
+            className="inputCreate"
+            value={numberCreateWallet}
+            onChange={(e) => {
+              setNumberCreateWallet(Number(e.target.value));
+              console.log("Number(e.target.value)", Number(e.target.value));
+            }}
+          />
         </div>
         <div className="mt-10">
           <i>
@@ -270,7 +322,7 @@ export default function Home() {
             {loadingToken ? (
               <BoxLoader />
             ) : decimalsToken !== 0 ? (
-              "load success!"
+              `load success! \n Balance Token : ${balanceToken}`
             ) : (
               errorLoadToken
             )}

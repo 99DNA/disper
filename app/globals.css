@@ -80,6 +80,16 @@ html {
   width: 530px;
   height: 50px;
 }
+.inputCreate {
+  flex-grow: 1;
+  border: none;
+  border-bottom: 2px #111 solid;
+  padding: 0.7rem;
+  background: aquamarine;
+  margin-right: 1.4rem;
+  width: 530px;
+  height: 50px;
+}
 
 .load {
   border: none;

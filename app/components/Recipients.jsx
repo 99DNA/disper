@@ -25,36 +25,20 @@ function Recipients({ tokenSymbol, handleSetAddresses }) {
   };
   const csvFileToArray = (string) => {
     // const csvHeader = string.slice(0, string.indexOf("\n")).split(",");
-    const web3 = new Web3();
     console.log("string: ", string);
-    //setListAddress(string)
     const csvRows = string.split("\n");
     csvRows.pop();
     console.log("csv row: ", csvRows);
-    const listPrivateKey = csvRows.map((i) => {
-      const values = i.split(" ");
-      return values;
-    });
-
-    console.log("listPrivateKey: ", listPrivateKey);
 
     const listPubkey = csvRows.map((i) => {
-      console.log("key: ", i);
-      const publicKey = web3.eth.accounts.privateKeyToAccount(i);
-      return publicKey.address;
+      return i[0];
     });
 
     const listPubkeyStr = listPubkey.join("\r\n");
     setListAddress(listPubkeyStr);
-
     console.log("listPubkey: ", listPubkey);
-    // const listAdd = array.map((e) => {
-    //   return e[0];
-    // });
-    // const listAmount = array.map((e) => {
-    //   return e[1];
-    // });
-    0x4ab6301bb3d1d5928e0c3e18bddc2e50fd9504de;
+
+    console.log("listPubkeyStr: ", listPubkeyStr);
   };
 
   const handleChange = (str) => {
