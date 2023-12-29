@@ -1,9 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
-
-import logo from "./assets/ethereum.svg";
-import Image from "next/image";
 import Recipients from "./components/Recipients";
+import { BoxLoader } from "./components/Loader";
 
 const {
   Keypair,
@@ -14,14 +12,7 @@ const {
 } = require("@solana/web3.js");
 import { CSVLink } from "react-csv";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import {
-  // getOrCreateAssociatedTokenAccount,
-  createTransferInstruction,
-  //   getAccount,
-  //   createAssociatedTokenAccount,
-  //   getAssociatedTokenAddressSync,
-  //createAssociatedTokenAccountInstruction,
-} from "@solana/spl-token";
+import { createTransferInstruction } from "@solana/spl-token";
 import { getOrCreateAssociatedTokenAccount } from "./utils/solana/getOrCreateAssociatedTokenAccount";
 // import { createTransferInstruction } from "./utils/solana/createTransferInstructions";
 import BigNumber from "bignumber.js";
@@ -34,6 +25,8 @@ export default function Home() {
   const { connection } = useConnection();
   const [tokenAddress, setTokenAddress] = useState("");
   const [decimalsToken, setDecimalsToken] = useState(0);
+  const [loadingToken, setLoadingToken] = useState(false);
+  const [errorLoadToken, setErrorLoadToken] = useState("");
 
   useEffect(() => {
     const _values = dataImport.map((r) => r.amount);
@@ -63,10 +56,15 @@ export default function Home() {
   const loadToken = async () => {
     try {
       if (tokenAddress) {
+        setLoadingToken(true);
+        setDecimalsToken(0);
         const decimalsToken_ = await getNumberDecimals(tokenAddress);
+        setLoadingToken(false);
         setDecimalsToken(decimalsToken_);
       }
     } catch (error) {
+      setLoadingToken(false);
+      setErrorLoadToken("load fail!");
       console.log("error loadToken", error);
     }
   };
@@ -81,17 +79,23 @@ export default function Home() {
     try {
       let transactions = new Transaction();
       if (isSendEther) {
-        dataImport.map((e) => {
+        for (var i = 0; i < dataImport.length; i++) {
+          const toPubkey = new PublicKey(dataImport[i][0]);
+          if (
+            isNaN(dataImport[i][1]) ||
+            !PublicKey.isOnCurve(toPubkey.toBytes())
+          )
+            return;
           transactions.add(
             SystemProgram.transfer({
               fromPubkey: publicKey,
-              toPubkey: new PublicKey(e[0]),
+              toPubkey: toPubkey,
               lamports: new BigNumber(LAMPORTS_PER_SOL)
-                .multipliedBy(e[1])
+                .multipliedBy(dataImport[i][1])
                 .toString(),
             })
           );
-        });
+        }
       } else {
         // const associatedToken = getAssociatedTokenAddressSync(mint, publicKey);
         // const associatedTokenTo = getAssociatedTokenAddressSync(
@@ -141,6 +145,12 @@ export default function Home() {
         // const toTokenAccount = await getAccount(connection, associatedTokenTo);
         for (var i = 0; i < dataImport.length; i++) {
           const toPublicKey = new PublicKey(dataImport[i][0]);
+          if (
+            isNaN(dataImport[i][1]) ||
+            !PublicKey.isOnCurve(toPublicKey.toBytes())
+          )
+            continue;
+
           const mint = new PublicKey(tokenAddress);
           const fromTokenAccount = await getOrCreateAssociatedTokenAccount(
             connection,
@@ -196,23 +206,34 @@ export default function Home() {
     const result = (info.value?.data).parsed.info.decimals;
     return result;
   }
+  const [balance, setBalance] = useState(null);
+
+  const fetchBalance = async () => {
+    if (publicKey && connection) {
+      const balance1 = await connection.getBalance(publicKey);
+      setBalance(new BigNumber(balance1).div(LAMPORTS_PER_SOL).toString());
+    }
+  };
+
+  useEffect(() => {
+    try {
+      fetchBalance();
+    } catch (e) {
+      console.log("error", e);
+    }
+  }, [connection, publicKey]);
   return (
-    <div className="mx-30 px-30 pt-20">
-      <section>
+    <div style={{ marginTop: 16 }}>
+      Balance: {balance + "SOL"}
+      <section className="mx-30 px-30 pt-10">
         <div>
           <div className="flex space-between">
-            <Image
-              src={logo}
-              width={30}
-              height={30}
-              className="img"
-              alt="logo"
-            />
-            <h2 className="mt-8 text-4xl font-light">disperse</h2>
+            <h2 className="mt-4 text-4xl font-light mr-1">Solana {"  "}</h2>
+            <h2 className="mt-4 text-4xl font-light">disperse</h2>
           </div>
           <div></div>
-          <p className="pt-8 text-l font-light">
-            <i>verb</i> distribute ether or tokens to multiple addresses
+          <p className="pt-4 text-l font-light">
+            <i>verb</i> distribute solana or tokens to multiple addresses
           </p>
         </div>
         <div className="button">
@@ -225,7 +246,7 @@ export default function Home() {
         </div>
         <div className="mt-10">
           <i>
-            send <u onClick={() => setIsSendEther(true)}>ether</u> or{" "}
+            send <u onClick={() => setIsSendEther(true)}>solana</u> or{" "}
             <u onClick={() => setIsSendEther(false)}>token</u>
           </i>
         </div>
@@ -245,7 +266,14 @@ export default function Home() {
             >
               load
             </button>
-            {decimalsToken !== 0 && "load success!"}
+
+            {loadingToken ? (
+              <BoxLoader />
+            ) : decimalsToken !== 0 ? (
+              "load success!"
+            ) : (
+              errorLoadToken
+            )}
           </div>
         ) : (
           <div></div>

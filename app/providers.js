@@ -3,6 +3,9 @@ import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import {
   ConnectionProvider,
   WalletProvider,
+  ConnectionContextState,
+  useWallet,
+  useConnection,
 } from "@solana/wallet-adapter-react";
 import {
   WalletModalProvider,
@@ -15,19 +18,18 @@ import {
   PhantomWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
 import { clusterApiUrl } from "@solana/web3.js";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 require("@solana/wallet-adapter-react-ui/styles.css");
-const options = [
-  { value: "mainnet", label: "Mainnet" },
-  { value: "testnet", label: "Testnet" },
-];
-const Context = ({ children }) => {
-  // The network can be set to 'devnet', 'testnet', or 'mainnet-beta'.
-  const network = WalletAdapterNetwork.Testnet;
-  const [selectedOption, setSelectedOption] = useState(options[0]);
+import Select from "react-select";
 
-  // You can also provide a custom RPC endpoint.
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+const options = [
+  { value: "mainnet-beta", label: "Mainnet" },
+  { value: "testnet", label: "Testnet" },
+  { value: "devnet", label: "Devnet" },
+];
+
+const Context = ({ children, endpoint }) => {
+  // The network can be set to 'devnet', 'testnet', or 'mainnet-beta'.
 
   const wallets = useMemo(
     () => [
@@ -37,29 +39,48 @@ const Context = ({ children }) => {
       new PhantomWalletAdapter(),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [network]
+    [endpoint]
   );
   return (
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>{children}</WalletModalProvider>
-        {/* <Select
-          defaultValue={selectedOption}
-          onChange={setSelectedOption}
-          options={options}
-        /> */}
       </WalletProvider>
     </ConnectionProvider>
   );
 };
 
-const Content = () => {
-  return <WalletMultiButton style={{ background: "aquamarine" }} />;
-};
 function Providers({ children }) {
+  const [selectedOption, setSelectedOption] = useState(options[1]);
+
+  // You can also provide a custom RPC endpoint.
+  const endpoint = useMemo(
+    () => clusterApiUrl(selectedOption.value),
+    [selectedOption]
+  );
+
   return (
-    <Context>
-      <Content />
+    <Context endpoint={endpoint}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginTop: "1rem",
+        }}
+      >
+        <WalletMultiButton
+          style={{
+            background: "aquamarine",
+            boxShadow: "6px 6px crimson",
+            color: "black",
+          }}
+        />
+        <Select
+          defaultValue={selectedOption}
+          onChange={setSelectedOption}
+          options={options}
+        />
+      </div>
       {children}
     </Context>
   );

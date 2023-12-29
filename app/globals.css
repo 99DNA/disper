@@ -91,3 +91,8 @@ html {
 .token {
   margin-top: 20px;
 }
+
+.select {
+  background: aquamarine;
+  color: black;
+}

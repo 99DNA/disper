@@ -74,7 +74,7 @@ function Recipients({ tokenSymbol, handleSetAddresses }) {
     handleSetAddresses(separateLines.map((e) => e.split(" ")));
   };
   return (
-    <div className="pt-16">
+    <div className="pt-8">
       <h3 className="text-2xl font-light italic">recipients and amounts</h3>
       <p className="pt-3 text-l font-light">
         enter one address and amount in {tokenSymbol} on each line. supports any
