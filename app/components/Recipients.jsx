@@ -6,14 +6,13 @@ function Recipients({ tokenSymbol, handleSetAddresses }) {
   const [file, setFile] = useState();
   const [listAddress, setListAddress] = useState();
 
-  const fileReader = new FileReader();
-
   const handleOnChange = (e) => {
     setFile(e.target.files[0]);
   };
 
   const handleOnSubmit = (e) => {
     e.preventDefault();
+    const fileReader = new FileReader();
 
     if (file) {
       fileReader.onload = function (event) {

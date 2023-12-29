@@ -90,7 +90,15 @@ html {
   width: 530px;
   height: 50px;
 }
-
+.inputFill {
+  flex-grow: 1;
+  border: none;
+  border-bottom: 2px #111 solid;
+  padding: 0.7rem;
+  background: aquamarine;
+  width: 530px;
+  height: 30px;
+}
 .load {
   border: none;
   font-style: italic;

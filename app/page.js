@@ -23,6 +23,7 @@ import {
   createAssociatedTokenAccountInstruction,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   createMintToInstruction,
+  TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
 import { getOrCreateAssociatedTokenAccount } from "./utils/solana/getOrCreateAssociatedTokenAccount";
 // import { createTransferInstruction } from "./utils/solana/createTransferInstructions";
@@ -44,6 +45,25 @@ export default function Home() {
   const [numberCreateWallet, setNumberCreateWallet] = useState(10);
   const [balance, setBalance] = useState(null);
   const [balanceToken, setBalanceToken] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
+
+  const [nameTokenFill, setNameTokenFill] = useState("");
+  const [symbolTokenFill, setSymbolTokenFill] = useState("");
+  const [decimalsTokenFill, setDecimalsTokenFill] = useState(9);
+
+  const [uriTokenFill, setUriTokenFill] = useState("");
+  const [mintAmountFill, setMintAmountFill] = useState(10000000);
+  const [defaultChecked, setDefaultChecked] = useState(false);
+
+  console.log(
+    "data token fill",
+    nameTokenFill,
+    symbolTokenFill,
+    decimalsTokenFill,
+    uriTokenFill,
+    mintAmountFill,
+    defaultChecked
+  );
 
   // useEffect(() => {
   //   const _values = dataImport.map((r) => r.amount);
@@ -261,6 +281,7 @@ export default function Home() {
     try {
       const mintKeypair = Keypair.generate();
       const lamports = await getMinimumBalanceForRentExemptMint(connection);
+      console.log(" mpl.PROGRAM_ID", mpl.PROGRAM_ID);
       const createMetadataInstruction =
         mpl.createCreateMetadataAccountV3Instruction(
           {
@@ -342,9 +363,12 @@ export default function Home() {
       console.log("create mint fail", e);
     }
   };
+  const handleShowCreate = () => {
+    setShowCreate(true);
+  };
   return (
     <div style={{ marginTop: 16 }}>
-      Balance: {balance + "SOL"}
+      {balance && `Balance: ${balance} SOL`}
       <section className="mx-30 px-30 pt-4">
         <div>
           <div className="flex space-between">
@@ -370,10 +394,118 @@ export default function Home() {
 
           <button className="buy">buy</button>
           <button className="sell">sell</button>
-          <button className="sell" onClick={async (e) => await createMint(e)}>
-            Create Mint
+          <button
+            className="sell"
+            onClick={async (e) => setShowCreate(!showCreate)}
+          >
+            Show Create Mint
           </button>
         </div>
+        {showCreate && (
+          <div
+            style={{
+              alignItems: "center",
+              marginTop: 16,
+              marginBottom: 32,
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                height: 2,
+                background: "aquamarine",
+                marginBottom: 32,
+              }}
+            />
+            <div>
+              <h5>Fill metadata:</h5>
+              <span>Name</span>
+              <input
+                placeholder="solana"
+                className="inputFill"
+                value={nameTokenFill}
+                onChange={(e) => {
+                  setNameTokenFill(e.target.value);
+                }}
+              />
+            </div>
+            <div>
+              <span>Symbol</span>
+              <input
+                placeholder="SOL"
+                className="inputFill"
+                value={symbolTokenFill}
+                onChange={(e) => {
+                  setSymbolTokenFill(e.target.value);
+                }}
+              />
+            </div>
+            <div>
+              <span>Decimals</span>
+              <input
+                type="number"
+                placeholder="9"
+                className="inputFill"
+                value={decimalsTokenFill}
+                onChange={(e) => {
+                  setDecimalsTokenFill(Number(e.target.value));
+                }}
+              />
+            </div>
+            <div>
+              <span>Uri</span>
+
+              <input
+                placeholder="https://...."
+                className="inputFill"
+                value={uriTokenFill}
+                onChange={(e) => {
+                  setUriTokenFill(e.target.value);
+                }}
+              />
+            </div>
+            <div>
+              <span>Mint amount</span>
+              <input
+                type="number"
+                placeholder="10000000"
+                className="inputFill"
+                value={mintAmountFill}
+                onChange={(e) => {
+                  setMintAmountFill(Number(e.target.value));
+                }}
+              />
+            </div>
+            <div>
+              <label>
+                <input
+                  type="checkbox"
+                  defaultChecked={defaultChecked}
+                  onChange={(e) => setDefaultChecked(e.target.checked)}
+                  style={{ marginRight: 8 }}
+                />
+                Freeze mint
+              </label>
+            </div>
+
+            <button
+              className="sell"
+              onClick={async (e) => await createMint(e)}
+              style={{ marginTop: 16 }}
+            >
+              Create Mint
+            </button>
+            <div
+              style={{
+                width: "100%",
+                height: 2,
+                background: "aquamarine",
+                marginTop: 32,
+              }}
+            />
+          </div>
+        )}
+
         <div
           className="flex"
           style={{
@@ -395,7 +527,8 @@ export default function Home() {
             }}
           />
         </div>
-        <div className="mt-10">
+
+        <div className="mt-6">
           <i>
             send <u onClick={() => setIsSendEther(true)}>solana</u> or{" "}
             <u onClick={() => setIsSendEther(false)}>token</u>
