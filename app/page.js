@@ -3,30 +3,39 @@ import React, { useState, useEffect } from "react";
 import Recipients from "./components/Recipients";
 import { BoxLoader } from "./components/Loader";
 
-const {
+import {
   Keypair,
   Transaction,
   SystemProgram,
   PublicKey,
   LAMPORTS_PER_SOL,
-} = require("@solana/web3.js");
+} from "@solana/web3.js";
 import { CSVLink } from "react-csv";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import {
   createTransferInstruction,
   getAssociatedTokenAddress,
   getAccount,
+  getMinimumBalanceForRentExemptMint,
+  MINT_SIZE,
+  TOKEN_PROGRAM_ID,
+  createInitializeMintInstruction,
+  createAssociatedTokenAccountInstruction,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  createMintToInstruction,
 } from "@solana/spl-token";
 import { getOrCreateAssociatedTokenAccount } from "./utils/solana/getOrCreateAssociatedTokenAccount";
 // import { createTransferInstruction } from "./utils/solana/createTransferInstructions";
 import BigNumber from "bignumber.js";
 import { base58 } from "ethers/lib/utils";
+import * as mpl from "@metaplex-foundation/mpl-token-metadata";
+
 export default function Home() {
   const [dataImport, setDataImport] = useState([]);
   const [isSendEther, setIsSendEther] = useState(true);
   const [values, setValues] = useState();
   const [total, setTotal] = useState();
-  const { sendTransaction, publicKey, signTransaction } = useWallet();
+  const { sendTransaction, publicKey, signTransaction, wallet } = useWallet();
   const { connection } = useConnection();
   const [tokenAddress, setTokenAddress] = useState("");
   const [decimalsToken, setDecimalsToken] = useState(0);
@@ -243,6 +252,96 @@ export default function Home() {
       console.log("error", e);
     }
   }, [connection, publicKey]);
+
+  const createMint = async (event) => {
+    event.preventDefault();
+    if (!connection || !publicKey) {
+      return;
+    }
+    try {
+      const mintKeypair = Keypair.generate();
+      const lamports = await getMinimumBalanceForRentExemptMint(connection);
+      const createMetadataInstruction =
+        mpl.createCreateMetadataAccountV3Instruction(
+          {
+            metadata: PublicKey.findProgramAddressSync(
+              [
+                Buffer.from("metadata"),
+                mpl.PROGRAM_ID.toBuffer(),
+                mintKeypair.publicKey.toBuffer(),
+              ],
+              mpl.PROGRAM_ID
+            )[0],
+            mint: mintKeypair.publicKey,
+            mintAuthority: publicKey,
+            payer: publicKey,
+            updateAuthority: publicKey,
+          },
+          {
+            createMetadataAccountArgsV3: {
+              data: {
+                name: "abcdef",
+                symbol: "abc",
+                uri: "uri example",
+                creators: null,
+                sellerFeeBasisPoints: 0,
+                uses: null,
+                collection: null,
+              },
+              isMutable: false,
+              collectionDetails: null,
+            },
+          }
+        );
+      console.log("createMetadataInstruction", createMetadataInstruction);
+      const decimals = 6;
+      const associatedToken = await getAssociatedTokenAddress(
+        mintKeypair.publicKey,
+        publicKey,
+        false,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+      const createNewTokenTransaction = new Transaction().add(
+        SystemProgram.createAccount({
+          fromPubkey: publicKey,
+          newAccountPubkey: mintKeypair.publicKey,
+          space: MINT_SIZE,
+          lamports: lamports,
+          programId: TOKEN_PROGRAM_ID,
+        }),
+        createInitializeMintInstruction(
+          mintKeypair.publicKey,
+          decimals,
+          publicKey,
+          publicKey,
+          TOKEN_PROGRAM_ID
+        ),
+        createAssociatedTokenAccountInstruction(
+          publicKey,
+          associatedToken,
+          publicKey,
+          mintKeypair.publicKey
+        ),
+        createMintToInstruction(
+          mintKeypair.publicKey,
+          associatedToken,
+          publicKey,
+          1000000 * Math.pow(10, decimals)
+        ),
+        createMetadataInstruction
+      );
+      const signature = await sendTransaction(
+        createNewTokenTransaction,
+        connection,
+        { signers: [mintKeypair] }
+      );
+      await connection.confirmTransaction(signature, "confirmed");
+      alert("Create mint success!.");
+    } catch (e) {
+      console.log("create mint fail", e);
+    }
+  };
   return (
     <div style={{ marginTop: 16 }}>
       Balance: {balance + "SOL"}
@@ -271,6 +370,9 @@ export default function Home() {
 
           <button className="buy">buy</button>
           <button className="sell">sell</button>
+          <button className="sell" onClick={async (e) => await createMint(e)}>
+            Create Mint
+          </button>
         </div>
         <div
           className="flex"
