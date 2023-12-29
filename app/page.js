@@ -36,19 +36,19 @@ export default function Home() {
   const [balance, setBalance] = useState(null);
   const [balanceToken, setBalanceToken] = useState(null);
 
-  useEffect(() => {
-    const _values = dataImport.map((r) => r.amount);
-    let _total = 0;
-    for (let i = 0; i < _values.length; i++) {
-      _total += Number(_values[i]);
-    }
-    console.log("_total: ", _total);
-    setTotal(_total);
+  // useEffect(() => {
+  //   const _values = dataImport.map((r) => r.amount);
+  //   let _total = 0;
+  //   for (let i = 0; i < _values.length; i++) {
+  //     _total += Number(_values[i]);
+  //   }
+  //   console.log("_total: ", _total);
+  //   setTotal(_total);
 
-    console.log("values: ", _values);
+  //   console.log("values: ", _values);
 
-    setValues(_values);
-  }, [dataImport]);
+  //   setValues(_values);
+  // }, [dataImport]);
 
   const createWallet = (numberCreateWallet_) => {
     const accounts = [];
@@ -89,12 +89,9 @@ export default function Home() {
       let transactions = new Transaction();
       if (isSendEther) {
         for (var i = 0; i < dataImport.length; i++) {
+          if (!dataImport[i][1] || !dataImport[i][0]) return;
           const toPubkey = new PublicKey(dataImport[i][0]);
-          if (
-            isNaN(dataImport[i][1]) ||
-            !PublicKey.isOnCurve(toPubkey.toBytes())
-          )
-            return;
+          if (isNaN(dataImport[i][1])) return;
           transactions.add(
             SystemProgram.transfer({
               fromPubkey: publicKey,
@@ -307,7 +304,7 @@ export default function Home() {
             <div className="token">Token Address</div>
             <input
               tile="text"
-              placeholder="0x73978a2ce9bd30d0a84471d16f02d32913f88c23"
+              placeholder="Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGhKJr"
               className="input"
               onChange={(e) => handleChangeToken(e.target.value)}
             />

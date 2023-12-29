@@ -27,18 +27,16 @@ function Recipients({ tokenSymbol, handleSetAddresses }) {
     // const csvHeader = string.slice(0, string.indexOf("\n")).split(",");
     console.log("string: ", string);
     const csvRows = string.split("\n");
-    csvRows.pop();
-    console.log("csv row: ", csvRows);
+    csvRows.shift();
+    console.log("csvRows: ", csvRows);
 
     const listPubkey = csvRows.map((i) => {
-      return i[0];
+      const [publicKey] = i.split(",");
+      return publicKey.replace(/['"]+/g, "");
     });
-
-    const listPubkeyStr = listPubkey.join("\r\n");
-    setListAddress(listPubkeyStr);
+    setListAddress(listPubkey.join("\r\n"));
+    handleSetAddresses(listPubkey.join("\r\n"));
     console.log("listPubkey: ", listPubkey);
-
-    console.log("listPubkeyStr: ", listPubkeyStr);
   };
 
   const handleChange = (str) => {
@@ -46,16 +44,9 @@ function Recipients({ tokenSymbol, handleSetAddresses }) {
     setListAddress(str);
     var separateLines = str.split(/\r?\n|\r|\n/g);
     console.log("separateLines", separateLines);
-
-    // const strSplit = e.target.value.toString().split("\n")
-    // //console.log("list: ", strSplit)
-    // const listRecipients = strSplit.map((i) => {
-    //   return {address: i.substring(0, 42), amount: i.substring(43) ? i.substring(43) : "0"}
-    // })
-
-    // //console.log("listRecipients: ", listRecipients)
-
-    handleSetAddresses(separateLines.map((e) => e.split(" ")));
+    handleSetAddresses(
+      separateLines.map((e) => (e.includes(";") ? e.split(";") : e.split(" ")))
+    );
   };
   return (
     <div className="pt-8">
@@ -78,7 +69,7 @@ function Recipients({ tokenSymbol, handleSetAddresses }) {
         placeholder={
           "0x2b1F577230F4D72B3818895688b66abD9701B4dC 1.41421" +
           "\n" +
-          "0x2b1F577230F4D72B3818895688b66abD9701B4dC 1.41421" +
+          "0x2b1F577230F4D72B3818895688b66abD9701B4dC;1.41421" +
           "\n"
         }
       ></textarea>
