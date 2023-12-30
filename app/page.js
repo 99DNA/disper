@@ -24,6 +24,8 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   createMintToInstruction,
   TOKEN_2022_PROGRAM_ID,
+  createSetAuthorityInstruction,
+  AuthorityType,
 } from "@solana/spl-token";
 import { getOrCreateAssociatedTokenAccount } from "./utils/solana/getOrCreateAssociatedTokenAccount";
 // import { createTransferInstruction } from "./utils/solana/createTransferInstructions";
@@ -34,8 +36,6 @@ import * as mpl from "@metaplex-foundation/mpl-token-metadata";
 export default function Home() {
   const [dataImport, setDataImport] = useState([]);
   const [isSendEther, setIsSendEther] = useState(true);
-  const [values, setValues] = useState();
-  const [total, setTotal] = useState();
   const { sendTransaction, publicKey, signTransaction, wallet } = useWallet();
   const { connection } = useConnection();
   const [tokenAddress, setTokenAddress] = useState("");
@@ -54,6 +54,9 @@ export default function Home() {
   const [uriTokenFill, setUriTokenFill] = useState("");
   const [mintAmountFill, setMintAmountFill] = useState(10000000);
   const [defaultChecked, setDefaultChecked] = useState(false);
+  const [mintCreatedSuccess, setMintCreatedSuccess] = useState(false);
+  const [mintAddress, setMintAddress] = useState('');
+
 
   console.log(
     "data token fill",
@@ -301,9 +304,9 @@ export default function Home() {
           {
             createMetadataAccountArgsV3: {
               data: {
-                name: "abcdef",
-                symbol: "abc",
-                uri: "uri example",
+                name: nameTokenFill,
+                symbol: symbolTokenFill,
+                uri: uriTokenFill,
                 creators: null,
                 sellerFeeBasisPoints: 0,
                 uses: null,
@@ -315,7 +318,7 @@ export default function Home() {
           }
         );
       console.log("createMetadataInstruction", createMetadataInstruction);
-      const decimals = 6;
+      const decimals = decimalsTokenFill;
       const associatedToken = await getAssociatedTokenAddress(
         mintKeypair.publicKey,
         publicKey,
@@ -348,18 +351,29 @@ export default function Home() {
           mintKeypair.publicKey,
           associatedToken,
           publicKey,
-          1000000 * Math.pow(10, decimals)
+          mintAmountFill * Math.pow(10, decimals)
         ),
-        createMetadataInstruction
+        createMetadataInstruction,
       );
+      if (defaultChecked) {
+        createNewTokenTransaction.add(createSetAuthorityInstruction(
+          mintKeypair.publicKey,
+          publicKey,
+          AuthorityType.MintTokens,
+          null,
+        ))
+      }
       const signature = await sendTransaction(
         createNewTokenTransaction,
         connection,
         { signers: [mintKeypair] }
       );
       await connection.confirmTransaction(signature, "confirmed");
+      setMintAddress(mintKeypair.publicKey.toBase58())
+      setMintCreatedSuccess(true)
       alert("Create mint success!.");
     } catch (e) {
+      setMintCreatedSuccess(false)
       console.log("create mint fail", e);
     }
   };
@@ -400,6 +414,7 @@ export default function Home() {
           >
             Show Create Mint
           </button>
+
         </div>
         {showCreate && (
           <div
@@ -495,6 +510,7 @@ export default function Home() {
             >
               Create Mint
             </button>
+            {mintCreatedSuccess ? <p>Mint: {mintAddress}</p> : <></>}
             <div
               style={{
                 width: "100%",
