@@ -51,7 +51,7 @@ const Context = ({ children, endpoint }) => {
 };
 
 function Providers({ children }) {
-  const [selectedOption, setSelectedOption] = useState(options[1]);
+  const [selectedOption, setSelectedOption] = useState(options[2]);
 
   // You can also provide a custom RPC endpoint.
   const endpoint = useMemo(

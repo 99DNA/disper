@@ -27,15 +27,14 @@ import {
   createSetAuthorityInstruction,
   AuthorityType,
 } from "@solana/spl-token";
-import { getOrCreateAssociatedTokenAccount } from "./utils/solana/getOrCreateAssociatedTokenAccount";
-// import { createTransferInstruction } from "./utils/solana/createTransferInstructions";
+import { getAssociatedTokenAccount } from "./utils/solana/getOrCreateAssociatedTokenAccount";
 import BigNumber from "bignumber.js";
 import { base58 } from "ethers/lib/utils";
 import * as mpl from "@metaplex-foundation/mpl-token-metadata";
 
 export default function Home() {
   const [dataImport, setDataImport] = useState([]);
-  const [isSendEther, setIsSendEther] = useState(true);
+  const [isSendSol, setIsSendSol] = useState(true);
   const { sendTransaction, publicKey, signTransaction, wallet } = useWallet();
   const { connection } = useConnection();
   const [tokenAddress, setTokenAddress] = useState("");
@@ -67,20 +66,6 @@ export default function Home() {
     mintAmountFill,
     defaultChecked
   );
-
-  // useEffect(() => {
-  //   const _values = dataImport.map((r) => r.amount);
-  //   let _total = 0;
-  //   for (let i = 0; i < _values.length; i++) {
-  //     _total += Number(_values[i]);
-  //   }
-  //   console.log("_total: ", _total);
-  //   setTotal(_total);
-
-  //   console.log("values: ", _values);
-
-  //   setValues(_values);
-  // }, [dataImport]);
 
   const createWallet = (numberCreateWallet_) => {
     const accounts = [];
@@ -119,7 +104,7 @@ export default function Home() {
     if (!publicKey) alert("Please connect wallet.");
     try {
       let transactions = new Transaction();
-      if (isSendEther) {
+      if (isSendSol) {
         for (var i = 0; i < dataImport.length; i++) {
           if (!dataImport[i][1] || !dataImport[i][0]) return;
           const toPubkey = new PublicKey(dataImport[i][0]);
@@ -190,31 +175,31 @@ export default function Home() {
             continue;
 
           const mint = new PublicKey(tokenAddress);
-          const fromTokenAccount = await getOrCreateAssociatedTokenAccount(
+          let { associatedTokenAccount: fromTokenAccount } = await getAssociatedTokenAccount(
             connection,
-            publicKey,
             mint,
             publicKey,
-            signTransaction
           );
-          console.log(
-            "fromTokenAccount",
-            fromTokenAccount,
-            toPublicKey.toString()
-          );
-          const toTokenAccount = await getOrCreateAssociatedTokenAccount(
+
+          const { associatedTokenAccount: toTokenAccount, tokenAccountExist } = await getAssociatedTokenAccount(
             connection,
-            publicKey,
             mint,
             toPublicKey,
-            signTransaction
           );
           console.log("toTokenAccount", toTokenAccount);
+          if (!tokenAccountExist) {
+            transactions.add(createAssociatedTokenAccountInstruction(
+              publicKey,
+              toTokenAccount,
+              toPublicKey,
+              mint
+            ))
+          }
 
           transactions.add(
             createTransferInstruction(
-              fromTokenAccount.address, // source
-              toTokenAccount.address, // dest
+              fromTokenAccount, // source
+              toTokenAccount, // dest
               publicKey,
               new BigNumber(10)
                 .exponentiatedBy(decimalsToken)
@@ -546,11 +531,11 @@ export default function Home() {
 
         <div className="mt-6">
           <i>
-            send <u onClick={() => setIsSendEther(true)}>solana</u> or{" "}
-            <u onClick={() => setIsSendEther(false)}>token</u>
+            send <u onClick={() => setIsSendSol(true)}>solana</u> or{" "}
+            <u onClick={() => setIsSendSol(false)}>token</u>
           </i>
         </div>
-        {!isSendEther ? (
+        {!isSendSol ? (
           <div>
             <div className="token">Token Address</div>
             <input
